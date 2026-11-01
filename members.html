@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Church Members Data System</title>
+  <script src="lib/sweetalert2.all.min.js"></script>
+  <script src="lib/jspdf.umd.min.js"></script>
+  <script src="lib/jspdf.plugin.autotable.min.js"></script>
+  <link rel="stylesheet" href="lib/fa/css/all.min.css">
+
+  <style>
+    :root { --primary: #059669; --dark: #0f172a; --bg: #f1f5f9; --call: #2563eb; --sms: #ea580c; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding-bottom: 70px; }
+    .header { background: var(--dark); color: white; padding: 15px; text-align: center; font-weight: bold; position: sticky; top:0; z-index:100; }
+    .menu-toggle-btn { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; padding: 4px 6px; }
+    .container { padding: 12px; max-width: 800px; margin: auto; }
+    .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; }
+    .side-nav {
+      position: fixed;
+      top: 0; left: 0;
+      width: 210px;
+      height: 100%;
+      background: white;
+      border-right: 1px solid #e2e8f0;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.08);
+      z-index: 150;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      padding-top: 60px;
+      box-sizing: border-box;
+    }
+    .side-nav.open { transform: translateX(0); }
+    .nav-btn { text-align: left; padding: 16px 20px; color: #64748b; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+    .nav-btn.active { color: var(--primary); border-left: 4px solid var(--primary); font-weight: bold; background: #f0fdf4; }
+    input, select { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+    table { width:100%; font-size:11px; border-collapse:collapse; margin-top:10px; }
+    th { text-align:left; background:#f8fafc; padding:10px; border-bottom: 2px solid #e2e8f0; }
+    td { padding:8px; border-bottom:1px solid #f1f5f9; }
+    .dept-header { background: #e2e8f0; font-weight: bold; padding: 8px 10px; color: #1e293b; border-left: 4px solid var(--primary); }
+    .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; }
+    .action-row { display: flex; gap: 15px; align-items: center; }
+    .call-btn { color: var(--call); } .sms-btn { color: var(--sms); } .view-btn { color: var(--primary); }
+    .badge-l { background: #dcfce7; color: #166534; padding: 2px 4px; border-radius: 3px; font-size: 9px; }
+    #syncLoader { text-align: center; padding: 50px; }
+
+    /* --- FAB button + searchable combo + option manager --- */
+    .fab-add {
+      position: fixed;
+      bottom: 80px;
+      right: 18px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 95;
+    }
+    .combo-wrap { position: relative; margin: 5px 0; }
+    .combo-row { display: flex; gap: 8px; align-items: center; }
+    .combo-row input { margin: 0; }
+    .combo-plus {
+      flex: 0 0 42px;
+      height: 42px;
+      border-radius: 8px;
+      border: none;
+      background: var(--dark);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .combo-list {
+      position: absolute;
+      left: 0; right: 0;
+      top: 100%;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      max-height: 160px;
+      overflow-y: auto;
+      z-index: 200;
+      display: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    }
+    .combo-list div {
+      padding: 9px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .combo-list div:hover { background: #f0fdf4; }
+    .combo-empty { padding: 9px 12px; font-size: 12px; color: #94a3b8; text-align: left; }
+    .field-label { font-size: 12px; font-weight: bold; color: #334155; text-align: left; margin-top: 8px; display: block; }
+    .opt-manage-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13px;
+    }
+    .opt-remove-btn {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .toast-container {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast-msg {
+      background: rgba(15, 23, 42, 0.94);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      max-width: 85vw;
+      text-align: center;
+    }
+    .toast-msg.show { opacity: 1; transform: translateY(0); }
+    .toast-msg.toast-error { background: rgba(185, 28, 28, 0.95); }
+    .csv-box { margin: 0 0 12px; padding: 10px; border: 1px dashed #94a3b8; border-radius: 8px; text-align: left; font-size: 11px; color: #475569; line-height: 1.5; }
+    .csv-btn { background: #0f172a; color: #fff; border: 0; border-radius: 8px; padding: 9px 12px; font-size: 13px; cursor: pointer; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <button class="menu-toggle-btn" id="menuToggleBtn" onclick="toggleSideNav()" title="Menu"><i class="fas fa-bars"></i></button>
+  CHURCH DATA SYSTEM
+</div>
+
+<div class="side-nav" id="sideNav">
+  <div class="nav-btn active" onclick="switchTab('home', this)"><i class="fas fa-home"></i> HOME</div>
+  <div class="nav-btn" onclick="switchTab('report', this)"><i class="fas fa-file-pdf"></i> REPORT</div>
+  <div class="nav-btn" onclick="switchTab('backup', this)"><i class="fas fa-cloud-upload-alt"></i> BACK UP</div>
+</div>
+
+<div class="container">
+  <div id="syncLoader"><i class="fas fa-sync fa-spin fa-2x" style="color:var(--primary)"></i><p>Loading System...</p></div>
+
+  <div id="homeTab" style="display:none;">
+    <div class="card">
+      <select id="homeYear" onchange="renderHome()"></select>
+      <input type="text" id="homeSearch" onkeyup="instantSearch()" placeholder="Search Name/Role/Dept...">
+    </div>
+
+    <div class="card">
+      <table id="mTable">
+        <thead><tr><th>Full Name</th><th>Role</th><th>Actions</th></tr></thead>
+        <tbody id="mBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="reportTab" style="display:none;">
+    <div class="card">
+      <h3>Reports & PDF</h3>
+      <label>Year</label><select id="repYear" onchange="updateReportOptions()"></select>
+      <label>Church</label><select id="repChurch" onchange="updateReportOptions()"></select>
+      <label>Department</label><select id="repDept" onchange="updateReportOptions()"></select>
+      <label>Personnel Category</label><select id="repCat"></select>
+
+      <button class="btn" style="margin-top:10px; background:#3b82f6;" onclick="previewReport()">Preview Result</button>
+      <div id="prevArea" style="margin-top:15px;"></div>
+      <button id="dlBtn" class="btn" onclick="downloadPDF()" style="background:#0f172a; display:none; margin-top:10px;">Download PDF Report</button>
+    </div>
+  </div>
+
+  <div id="backupTab" style="display:none;">
+    <div class="card"><div id="mbBackup"></div></div>
+  </div>
+</div>
+
+<button class="fab-add" id="fabAdd" onclick="openAddRecordForm()" title="Add member" style="display:none;">
+  <i class="fas fa-plus"></i>
+</button>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="backup-kit.js"></script>
+<script>
+/* =========================================================================
+   INDEXEDDB LAYER  (database "ChurchCMSDB": used only by the Members Data System)
+   Stores: members, fullNames, departments, roles, churches
+   ========================================================================= */
+const DB_NAME = "ChurchCMSDB";
+const DB_VERSION = 1;
+const OPTION_STORES = ["fullNames", "departments", "roles", "churches"];
+const ALL_STORES = ["members"].concat(OPTION_STORES);
+let idbInstance = null;
+const escH = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    if (idbInstance) return resolve(idbInstance);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains("members")) {
+        const s = d.createObjectStore("members", { keyPath: "id", autoIncrement: true });
+        s.createIndex("dept", "dept", { unique: false });
+        s.createIndex("year", "year", { unique: false });
+      }
+      OPTION_STORES.forEach(name => {
+        if (!d.objectStoreNames.contains(name)) {
+          const s = d.createObjectStore(name, { keyPath: "id", autoIncrement: true });
+          s.createIndex("value", "value", { unique: true });
+        }
+      });
+    };
+    req.onsuccess = (e) => { idbInstance = e.target.result; resolve(idbInstance); };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function idbGetAll(storeName) {
+  return openDB().then(d => new Promise((resolve, reject) => {
+    const tx = d.transaction(storeName, "readonly");
+    const req = tx.objectStore(storeName).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = (e) => reject(e.target.error);
+  }));
+}
+
+function backupChanged() { if (window.__bk) window.__bk.notifyChange(); }
+
+function idbAdd(storeName, obj) {
+  return openDB().then(d => new Promise((resolve, reject) => {
+    const tx = d.transaction(storeName, "readwrite");
+    const req = tx.objectStore(storeName).add(obj);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e.target.error);
+  })).then(r => { backupChanged(); return r; });
+}
+
+function idbDelete(storeName, id) {
+  return openDB().then(d => new Promise((resolve, reject) => {
+    const tx = d.transaction(storeName, "readwrite");
+    const req = tx.objectStore(storeName).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e.target.error);
+  })).then(r => { backupChanged(); return r; });
+}
+
+function addOptionIfNew(storeName, value) {
+  value = String(value || "").trim();
+  if (!value) return Promise.resolve(null);
+  return idbGetAll(storeName).then(existing => {
+    const match = existing.find(o => o.value.toLowerCase() === value.toLowerCase());
+    if (match) return match.id;
+    return idbAdd(storeName, { value: value });
+  });
+}
+
+/* =========================================================================
+   IN-MEMORY CACHE (mirrors IndexedDB so the UI updates instantly, offline)
+   ========================================================================= */
+let db = { members: [], departments: [], years: [] };
+let optionCache = { fullNames: [], departments: [], roles: [], churches: [] };
+const CURRENT_YEAR = String(new Date().getFullYear());
+
+function computeIsLeader(role) {
+  const r = String(role || "").trim();
+  return r.toLowerCase() !== "member" && r !== "";
+}
+
+function refreshCache() {
+  return Promise.all([
+    idbGetAll("members"),
+    idbGetAll("fullNames"),
+    idbGetAll("departments"),
+    idbGetAll("roles"),
+    idbGetAll("churches")
+  ]).then(([members, fullNames, departments, roles, churches]) => {
+    db.members = members;
+    const deptSet = new Set(members.map(m => m.dept).filter(Boolean));
+    const yearSet = new Set(members.map(m => m.year).filter(Boolean));
+    yearSet.add(CURRENT_YEAR);
+    db.departments = [...deptSet].sort();
+    db.years = [...yearSet].sort((a, b) => b - a);
+    optionCache.fullNames = fullNames;
+    optionCache.departments = departments;
+    optionCache.roles = roles;
+    optionCache.churches = churches;
+  });
+}
+
+/* =========================================================================
+   INITIAL LOAD
+   ========================================================================= */
+window.onload = () => {
+  refreshCache().then(() => {
+    const yrHtml = '<option value="ALL">All Years</option>' + db.years.map(y => `<option value="${y}">${y}</option>`).join('');
+    document.getElementById('homeYear').innerHTML = yrHtml;
+    document.getElementById('homeYear').value = CURRENT_YEAR;
+    document.getElementById('repYear').innerHTML = yrHtml;
+    document.getElementById('repYear').value = CURRENT_YEAR;
+    renderHome();
+    updateReportOptions();
+    document.getElementById('syncLoader').style.display = 'none';
+    document.getElementById('homeTab').style.display = 'block';
+    document.getElementById('fabAdd').style.display = 'flex';
+    mountBackup();
+  }).catch(err => {
+    document.getElementById('syncLoader').innerHTML = '<p>Could not open local database: ' + escH(err) + '</p>';
+    showToast('Something went wrong', true);
+  });
+};
+
+/* =========================================================================
+   HOME RENDERING - Grouped by Department. Shown in pages and searched in memory,
+   so very large member lists stay fast (only the first rows are put on the page).
+   ========================================================================= */
+let homeLimit = 300, searchTimer = null;
+function renderHome() {
+  const yrSel = document.getElementById('homeYear');
+  const yr = yrSel ? yrSel.value : CURRENT_YEAR;
+  const q = (document.getElementById('homeSearch').value || '').trim().toUpperCase();
+  let list = db.members;
+  if (yr !== "ALL") list = list.filter(m => m.year === yr);
+  if (q) list = list.filter(m => (String(m.name || '') + ' ' + String(m.role || '') + ' ' + String(m.dept || '')).toUpperCase().includes(q));
+  const byDept = {};
+  list.forEach(m => { (byDept[m.dept] = byDept[m.dept] || []).push(m); });
+
+  let html = '', shown = 0;
+  for (const dept of db.departments) {
+    const deptMembers = byDept[dept] || [];
+    if (!deptMembers.length) continue;
+    if (shown >= homeLimit) break;
+    html += `<tr class="dept-header"><td colspan="3">${escH(dept)}</td></tr>`;
+    for (const m of deptMembers) {
+      if (shown >= homeLimit) break;
+      shown++;
+      html += `
+          <tr>
+            <td>${escH(m.name)} ${m.isLeader ? '<span class="badge-l">L</span>' : ''}</td>
+            <td>${escH(m.role)}</td>
+            <td>
+              <div class="action-row">
+                <a href="tel:${escH(m.phone)}" class="call-btn"><i class="fas fa-phone-alt"></i></a>
+                <a href="sms:${escH(m.phone)}" class="sms-btn"><i class="fas fa-comment-alt"></i></a>
+                <i class="fas fa-eye view-btn" onclick="showOneById(${Number(m.id)})"></i>
+              </div>
+            </td>
+          </tr>`;
+    }
+  }
+  if (shown < list.length) html += `<tr><td colspan="3"><button class="btn" onclick="homeLimit+=300;renderHome()">Show more (${list.length - shown} more)</button></td></tr>`;
+  document.getElementById('mBody').innerHTML = html;
+}
+
+function showOneById(id) { const m = db.members.find(x => x.id === id); if (m) showOne(m); }
+function showOne(m) {
+  Swal.fire({
+    title: escH(m.name),
+    html: `<div style="text-align:left; font-size:13px; line-height:1.6;">
+      <b>Role:</b> ${escH(m.role)} | <b>Dept:</b> ${escH(m.dept)}<br>
+      <b>Church:</b> ${escH(m.church)}<br>
+      <b>Phone:</b> ${escH(m.phone)} | <b>Village:</b> ${escH(m.village)}<br>
+      <b>Village Leader:</b> ${escH(m.leader)}<br>
+      <b>Year:</b> ${escH(m.year)}</div>`,
+    confirmButtonColor: '#0f172a'
+  });
+}
+
+function instantSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { homeLimit = 300; renderHome(); }, 150);
+}
+
+/* =========================================================================
+   TOAST NOTIFICATIONS
+   ========================================================================= */
+function showToast(message, isError) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = 'toast-msg' + (isError ? ' toast-error' : '');
+  el.textContent = message;
+  container.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, 2200);
+}
+
+/* =========================================================================
+   LEFT SIDE NAVIGATION + TOGGLE
+   ========================================================================= */
+function toggleSideNav() {
+  document.getElementById('sideNav').classList.toggle('open');
+}
+
+function switchTab(t, el) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('homeTab').style.display = t === 'home' ? 'block' : 'none';
+  document.getElementById('reportTab').style.display = t === 'report' ? 'block' : 'none';
+  document.getElementById('backupTab').style.display = t === 'backup' ? 'block' : 'none';
+  document.getElementById('sideNav').classList.remove('open');
+}
+
+/* =========================================================================
+   REPORT LOGIC
+   ========================================================================= */
+function updateReportOptions() {
+  const yr = document.getElementById('repYear').value;
+  const churchSel = document.getElementById('repChurch');
+  const dept = document.getElementById('repDept').value;
+
+  const churchSetSource = yr !== "ALL" ? db.members.filter(m => m.year === yr) : db.members;
+  const churchList = [...new Set(churchSetSource.map(m => m.church).filter(Boolean))].sort();
+  const prevChurchVal = churchSel.value || "ALL";
+  churchSel.innerHTML = '<option value="ALL">All Churches</option>' + churchList.map(c => `<option value="${escH(c)}">${escH(c)}</option>`).join('');
+  if (churchList.includes(prevChurchVal)) churchSel.value = prevChurchVal;
+
+  document.getElementById('repDept').innerHTML = '<option value="ALL">All Departments</option>' + db.departments.map(d => `<option value="${escH(d)}">${escH(d)}</option>`).join('');
+  if (db.departments.includes(dept)) document.getElementById('repDept').value = dept;
+
+  let filtered = db.members;
+  if (yr !== "ALL") filtered = filtered.filter(m => m.year === yr);
+  if (churchSel.value !== "ALL") filtered = filtered.filter(m => m.church === churchSel.value);
+  if (document.getElementById('repDept').value !== "ALL") filtered = filtered.filter(m => m.dept === document.getElementById('repDept').value);
+
+  let html = '<option value="ALL_P">All Personnel</option>';
+  html += '<option value="ALL_L" style="color:green; font-weight:bold;">★ All Leaders Only</option>';
+  html += filtered.slice(0, 500).map(m => `<option value="${m.id}">${escH(m.name)}</option>`).join('');
+  if (filtered.length > 500) html += `<option disabled>… ${filtered.length - 500} more (narrow the filters above)</option>`;
+  document.getElementById('repCat').innerHTML = html;
+}
+
+function previewReport() {
+  const yr = document.getElementById('repYear').value;
+  const church = document.getElementById('repChurch').value;
+  const dept = document.getElementById('repDept').value;
+  const cat = document.getElementById('repCat').value;
+
+  let final = db.members;
+  if (yr !== "ALL") final = final.filter(m => m.year === yr);
+  if (church !== "ALL") final = final.filter(m => m.church === church);
+  if (dept !== "ALL") final = final.filter(m => m.dept === dept);
+
+  if (cat === "ALL_L") final = final.filter(m => m.isLeader);
+  else if (cat !== "ALL_P") final = final.filter(m => String(m.id) === String(cat));
+
+  window.lastReport = final;
+  window.lastReportMeta = { church: church !== "ALL" ? church : "All Churches", year: yr !== "ALL" ? yr : "All Years" };
+  document.getElementById('dlBtn').style.display = final.length ? 'block' : 'none';
+
+  let previewHtml = `<table style="background:#fff; border:1px solid #ddd;">`;
+  let rows = 0;
+  db.departments.forEach(d => {
+    const dItems = final.filter(x => x.dept === d);
+    if (dItems.length > 0 && rows < 1000) {
+      previewHtml += `<tr class="dept-header"><td colspan="2">${escH(d)}</td></tr>`;
+      dItems.slice(0, 1000 - rows).forEach(i => { rows++; previewHtml += `<tr><td>${escH(i.name)}</td><td>${escH(i.role)}</td></tr>`; });
+    }
+  });
+  if (final.length > rows) previewHtml += `<tr><td colspan="2"><i>Preview shows the first ${rows} of ${final.length} people. The PDF contains everyone.</i></td></tr>`;
+  document.getElementById('prevArea').innerHTML = previewHtml + `</table>`;
+
+  if (final.length) {
+    showToast('Report generated successfully');
+  } else {
+    showToast('Unable to complete action', true);
+  }
+}
+
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const data = window.lastReport || [];
+  const meta = window.lastReportMeta || { church: "All Churches", year: CURRENT_YEAR };
+
+  doc.setFontSize(16);
+  doc.text(String(meta.church).toUpperCase(), 14, 18);
+  doc.setFontSize(12);
+  doc.text(String(meta.year), 14, 26);
+
+  let y = 36;
+  const depts = [...new Set(data.map(m => m.dept).filter(Boolean))].sort();
+
+  depts.forEach(dept => {
+    const rows = data.filter(m => m.dept === dept);
+    if (!rows.length) return;
+
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Department: ${dept}`, 14, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+
+    doc.autoTable({
+      startY: y,
+      head: [['Name of member', 'Role', 'Phone Number', 'Village', 'Village Leader']],
+      body: rows.map(m => [m.name || '', m.role || '', m.phone || '', m.village || '', m.leader || '']),
+      theme: 'grid',
+      headStyles: { fillColor: [5, 150, 105] },
+      margin: { left: 14, right: 14 },
+      didDrawPage: (dat) => { y = dat.cursor.y + 10; }
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  });
+
+  doc.save(`Report_${new Date().getTime()}.pdf`);
+  showToast('PDF downloaded successfully');
+}
+
+/* =========================================================================
+   SEARCHABLE COMBO COMPONENT (Full Name / Department / Role / Church)
+   ========================================================================= */
+const FIELD_LABELS = { fullNames: "Full Name", departments: "Department", roles: "Role", churches: "Church" };
+
+function comboHtml(storeName, inputId) {
+  return `
+    <label class="field-label">${FIELD_LABELS[storeName]}</label>
+    <div class="combo-wrap">
+      <div class="combo-row">
+        <input type="text" id="${inputId}" autocomplete="off"
+          placeholder="Search or select ${FIELD_LABELS[storeName]}"
+          oninput="filterCombo('${storeName}','${inputId}')"
+          onfocus="filterCombo('${storeName}','${inputId}')"
+          onblur="setTimeout(()=>hideCombo('${inputId}'), 150)">
+        <button type="button" class="combo-plus" onclick="openOptionManager('${storeName}')">+</button>
+      </div>
+      <div class="combo-list" id="${inputId}_list"></div>
+    </div>`;
+}
+
+function filterCombo(storeName, inputId) {
+  const input = document.getElementById(inputId);
+  const listEl = document.getElementById(inputId + '_list');
+  const q = input.value.toLowerCase();
+  const options = optionCache[storeName] || [];
+  const matches = [];
+  for (let i = 0; i < options.length && matches.length < 50; i++) { if (options[i].value.toLowerCase().includes(q)) matches.push(options[i]); }   // at most 50 shown at a time
+
+  listEl.innerHTML = '';
+
+  if (matches.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'combo-empty';
+    empty.textContent = `No matches. Use + to add "${input.value || 'a new option'}".`;
+    listEl.appendChild(empty);
+  } else {
+    matches.forEach(o => {
+      const row = document.createElement('div');
+      row.textContent = o.value;
+      // Use mousedown (not click) and preventDefault so the input's blur
+      // event never fires before the selection is made.
+      row.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectCombo(inputId, o.value);
+      });
+      listEl.appendChild(row);
+    });
+  }
+  listEl.style.display = 'block';
+}
+
+function selectCombo(inputId, value) {
+  const input = document.getElementById(inputId);
+  input.value = value;
+  hideCombo(inputId);
+  input.focus();
+}
+
+function hideCombo(inputId) {
+  const listEl = document.getElementById(inputId + '_list');
+  if (listEl) listEl.style.display = 'none';
+}
+
+/* =========================================================================
+   OPTION MANAGER (+ button: add new option / remove existing options)
+   The Full Name "+" form also has an Import CSV button (names only).
+   ========================================================================= */
+function openOptionManager(storeName) {
+  const label = FIELD_LABELS[storeName];
+  renderOptionManager(storeName, label);
+}
+
+function renderOptionManager(storeName, label) {
+  const options = optionCache[storeName] || [];
+  const shownOpts = options.slice(0, 200);
+  const listHtml = options.length
+    ? shownOpts.map(o => `
+        <div class="opt-manage-row">
+          <span>${escH(o.value)}</span>
+          <button class="opt-remove-btn" onclick="removeOption('${storeName}', ${Number(o.id)}, '${label}')">Remove</button>
+        </div>`).join('') + (options.length > shownOpts.length ? `<div class="combo-empty">Showing 200 of ${options.length}. Use the search boxes to find the rest.</div>` : '')
+    : '<div class="combo-empty">No options added yet.</div>';
+  const csvHtml = storeName === 'fullNames' ? `
+        <div class="csv-box">
+          <button type="button" class="csv-btn" id="csvPickBtn"><i class="fas fa-file-import"></i> Import CSV</button>
+          <input type="file" id="csvFile" accept=".csv,.txt,text/csv,text/plain" style="display:none">
+          <div><b>CSV format:</b> one name per row, or a table whose first row is a heading such as <i>Name</i> or <i>Full Name</i> (that column is used). Spaces are trimmed, empty rows ignored, and names already saved (any capital/small letters) are skipped, never overwritten.</div>
+        </div>` : '';
+
+  Swal.fire({
+    title: `Manage ${label} Options`,
+    html: `
+      <div style="text-align:left;">
+        ${csvHtml}
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <input type="text" id="newOptInput" placeholder="Add new ${label}" style="margin:0;">
+        </div>
+        <div style="max-height:220px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px;">
+          ${listHtml}
+        </div>
+      </div>`,
+    showCancelButton: true,
+    confirmButtonText: 'Save New Option',
+    cancelButtonText: 'Close',
+    confirmButtonColor: '#059669',
+    didOpen: () => {
+      const pick = document.getElementById('csvPickBtn'), file = document.getElementById('csvFile');
+      if (pick && file) { pick.addEventListener('click', () => file.click()); file.addEventListener('change', () => { if (file.files && file.files[0]) importFullNamesCsv(file.files[0], storeName, label); }); }
+    },
+    preConfirm: () => {
+      const val = document.getElementById('newOptInput').value.trim();
+      if (!val) {
+        Swal.showValidationMessage('Enter a value first, or click Close.');
+        showToast('Please complete the required fields', true);
+        return false;
+      }
+      return addOptionIfNew(storeName, val).then(() => refreshCache()).then(() => val)
+        .catch(() => { showToast('Something went wrong', true); return false; });
+    }
+  }).then(result => {
+    if (result.isConfirmed) {
+      showToast('Added successfully');
+      renderOptionManager(storeName, label);
+    }
+  });
+}
+
+function removeOption(storeName, id, label) {
+  Swal.fire({
+    title: 'Remove this option?',
+    text: 'Existing member records that already use this value will NOT be changed.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Remove',
+    confirmButtonColor: '#b91c1c'
+  }).then(res => {
+    if (res.isConfirmed) {
+      idbDelete(storeName, id).then(() => refreshCache()).then(() => {
+        showToast('Removed successfully');
+        renderOptionManager(storeName, label);
+      }).catch(() => showToast('Something went wrong', true));
+    }
+  });
+}
+
+/* ---------- CSV import of Full Names (all-or-nothing; the single-name Add stays as it was) ---------- */
+function parseCsv(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const first = text.split(/\r\n|\n|\r/)[0] || '';
+  let delim = ',';
+  const cnt = { ',': (first.match(/,/g) || []).length, ';': (first.match(/;/g) || []).length, '\t': (first.match(/\t/g) || []).length };
+  if (cnt[';'] > cnt[delim]) delim = ';'; if (cnt['\t'] > cnt[delim]) delim = '\t';
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"' && cur === '') q = true;
+    else if (c === delim) { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+async function importFullNamesCsv(file, storeName, label) {
+  try {
+    if (file.size > 20 * 1024 * 1024) throw new Error('That file is larger than 20 MB.');
+    const text = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => rej(fr.error || new Error('The file could not be read.')); fr.readAsText(file); });
+    const rows = parseCsv(text);
+    if (!rows.length || !rows.some(r => r.some(c => String(c).trim()))) throw new Error('The file is empty.');
+    const HEAD = ['name', 'names', 'member', 'members', 'member name', 'full name', 'full names', 'fullname'];
+    let col = 0, start = 0; const h = rows[0].findIndex(c => HEAD.includes(String(c).replace(/\s+/g, ' ').trim().toLowerCase()));
+    if (h >= 0) { col = h; start = 1; }
+    const existing = new Set((optionCache.fullNames || []).map(o => String(o.value).toLowerCase())), seen = new Set(), add = [], dups = [], invalid = []; let empty = 0;
+    for (let r = start; r < rows.length; r++) {
+      const nm = String(rows[r][col] === undefined ? '' : rows[r][col]).normalize('NFC').replace(/\s+/g, ' ').trim();
+      if (!nm) { empty++; continue; }
+      if (nm.length > 100 || /[\u0000-\u001f]/.test(nm) || !/\p{L}/u.test(nm)) { invalid.push((r + 1) + ': ' + nm.slice(0, 30)); continue; }
+      const k = nm.toLowerCase();
+      if (existing.has(k) || seen.has(k)) { dups.push(nm); continue; }
+      seen.add(k); add.push({ value: nm });
+    }
+    const before = (await idbGetAll(storeName)).length; let failed = null;
+    if (add.length) {
+      try {
+        const d = await openDB();
+        await new Promise((res, rej) => { const tx = d.transaction(storeName, 'readwrite'); const s = tx.objectStore(storeName); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error('The import was cancelled by the database.')); try { add.forEach(o => s.add(o)); } catch (e) { try { tx.abort(); } catch (_) {} rej(e); } });
+        backupChanged();
+      } catch (e) { failed = e; }
+    }
+    const after = (await idbGetAll(storeName)).length, saved = after - before;
+    await refreshCache();
+    if (failed || saved !== add.length) {
+      const msg = failed ? (failed.name === 'QuotaExceededError' ? 'Device storage is full.' : String(failed.message || failed)) : 'The saved count did not match.';
+      await Swal.fire({ title: 'Import failed', html: escH(msg) + '<br>' + (saved === 0 ? 'No names were added. Your list is unchanged.' : 'Please check the list.'), icon: 'error' });
+    } else {
+      await Swal.fire({ title: saved ? 'Import complete' : 'Nothing new to add', icon: saved ? 'success' : 'info', html: `<div style="text-align:left;font-size:14px;line-height:1.6">Names added: <b>${saved}</b><br>Duplicates skipped: <b>${dups.length}</b><br>Invalid rows: <b>${invalid.length}</b><br>Empty rows ignored: <b>${empty}</b>${dups.length ? '<br><small>Duplicates (first 8): ' + escH(dups.slice(0, 8).join(', ')) + '</small>' : ''}${invalid.length ? '<br><small>Invalid (row: value): ' + escH(invalid.slice(0, 8).join(' | ')) + '</small>' : ''}</div>` });
+    }
+  } catch (e) {
+    await Swal.fire({ title: 'Import failed', text: String(e && e.message ? e.message : e) + ' Your list is unchanged.', icon: 'error' });
+  }
+  renderOptionManager(storeName, label);
+}
+
+/* =========================================================================
+   ADD RECORD FORM (+ circle button on Home)
+   ========================================================================= */
+function openAddRecordForm() {
+  Swal.fire({
+    title: 'Add Member',
+    html: `
+      ${comboHtml('fullNames', 'addFullName')}
+      ${comboHtml('churches', 'addChurch')}
+      ${comboHtml('departments', 'addDept')}
+      ${comboHtml('roles', 'addRole')}
+      <label class="field-label">Phone Number</label>
+      <input type="text" id="addPhone" placeholder="e.g. 07XXXXXXXX">
+      <label class="field-label">Village</label>
+      <input type="text" id="addVillage" placeholder="Village">
+      <label class="field-label">Village Leader</label>
+      <input type="text" id="addLeader" placeholder="Village Leader">
+    `,
+    width: 420,
+    showCancelButton: true,
+    confirmButtonText: 'Save',
+    confirmButtonColor: '#059669',
+    focusConfirm: false,
+    preConfirm: () => {
+      const name = document.getElementById('addFullName').value.trim();
+      const church = document.getElementById('addChurch').value.trim();
+      const dept = document.getElementById('addDept').value.trim();
+      const role = document.getElementById('addRole').value.trim();
+      const phone = document.getElementById('addPhone').value.trim();
+      const village = document.getElementById('addVillage').value.trim();
+      const leader = document.getElementById('addLeader').value.trim();
+
+      if (!name) {
+        Swal.showValidationMessage('Full name is required.');
+        showToast('Please complete the required fields', true);
+        return false;
+      }
+
+      const record = {
+        name, church, dept: dept || "General", role: role || "Member",
+        phone, village, leader,
+        year: CURRENT_YEAR,
+        isLeader: computeIsLeader(role)
+      };
+
+      return Promise.all([
+        idbAdd('members', record),
+        addOptionIfNew('fullNames', name),
+        addOptionIfNew('churches', church),
+        addOptionIfNew('departments', dept),
+        addOptionIfNew('roles', role)
+      ]).then(() => refreshCache())
+        .catch(() => { showToast('Something went wrong', true); return false; });
+    }
+  }).then(result => {
+    if (result.isConfirmed) {
+      // Immediately reflect on Home and Report without page reload
+      const yr = document.getElementById('homeYear');
+      yr.innerHTML = '<option value="ALL">All Years</option>' + db.years.map(y => `<option value="${y}">${y}</option>`).join('');
+      yr.value = CURRENT_YEAR;
+      document.getElementById('repYear').innerHTML = yr.innerHTML;
+      document.getElementById('repYear').value = CURRENT_YEAR;
+      renderHome();
+      updateReportOptions();
+      showToast('Saved successfully');
+    }
+  });
+}
+
+/* =========================================================================
+   BACKUP PAGE (Google Drive) - own folder, own file, own Auto Backup switch.
+   Records are read and restored only in this system's database "ChurchCMSDB".
+   ========================================================================= */
+async function memSnapshot() {
+  const data = {}, counts = {};
+  for (const n of ALL_STORES) { data[n] = await idbGetAll(n); counts[n] = data[n].length; }
+  return { data, counts };
+}
+function memValidate(d) {
+  if (!d || ALL_STORES.some(n => !Array.isArray(d[n]))) throw new Error("The backup does not contain Members Data System records.");
+  const ids = new Set();
+  d.members.forEach(m => { if (!m || typeof m.name !== 'string' || !m.name || !isFinite(Number(m.id))) throw new Error("A member record in the backup is invalid."); if (ids.has(m.id)) throw new Error("The backup lists the same member twice."); ids.add(m.id); });
+  OPTION_STORES.forEach(n => { const seen = new Set(); d[n].forEach(o => { if (!o || typeof o.value !== 'string' || !o.value || !isFinite(Number(o.id))) throw new Error("A saved option in the backup is invalid."); if (seen.has(o.value)) throw new Error("The backup repeats a saved option."); seen.add(o.value); }); });
+}
+async function memApply(d) {
+  const h = await openDB();
+  await new Promise((res, rej) => {
+    const tx = h.transaction(ALL_STORES, "readwrite");
+    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error("The restore was cancelled by the database."));
+    try { ALL_STORES.forEach(n => { const s = tx.objectStore(n); s.clear(); d[n].forEach(v => s.put(v)); }); } catch (e) { try { tx.abort(); } catch (_) {} rej(e); }
+  });
+}
+async function memAfterRestore() {
+  await refreshCache();
+  const yrHtml = '<option value="ALL">All Years</option>' + db.years.map(y => `<option value="${y}">${y}</option>`).join('');
+  document.getElementById('homeYear').innerHTML = yrHtml; document.getElementById('homeYear').value = CURRENT_YEAR;
+  document.getElementById('repYear').innerHTML = yrHtml; document.getElementById('repYear').value = CURRENT_YEAR;
+  renderHome(); updateReportOptions();
+}
+function mountBackup() {
+  if (!window.ChurchBackupKit) { document.getElementById('mbBackup').textContent = 'Backup is not available (backup-kit.js missing).'; return; }
+  window.__bk = ChurchBackupKit.mount({ system: 'members', label: 'Members Data System', container: document.getElementById('mbBackup'),
+    defaultFolderName: 'Church Members Backup', backupFileName: 'church-members-backup.json', formatName: 'church-members-backup', regKey: 'churchMembersBackupFolder',
+    ask: m => Swal.fire({ title: 'Please confirm', text: m, icon: 'question', showCancelButton: true, confirmButtonText: 'Yes, continue', confirmButtonColor: '#059669', focusCancel: true }).then(r => !!r.isConfirmed),
+    toast: (m, e) => showToast(m, e), readSnapshot: memSnapshot, validate: memValidate, applyRestore: memApply, afterRestore: memAfterRestore });
+}
+</script>
+</body>
+</html>

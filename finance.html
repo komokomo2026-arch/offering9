@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Church Finance System KSH</title>
+<style>
+:root{--primary:#059669;--dark:#0f172a;--bg:#f8fafc}
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);margin:0;padding-bottom:70px}
+.header{background:var(--dark);color:#fff;padding:15px;text-align:center;font-weight:bold;position:sticky;top:0;z-index:100}
+.container{padding:10px;max-width:800px;margin:auto}
+.card{background:#fff;padding:15px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:15px}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.stat-box{background:#fff;padding:10px;border-radius:10px;text-align:center;border:1px solid #e2e8f0;font-size:11px}
+.stat-box h5,.stat-box p{margin:3px 0}
+.nav{position:fixed;bottom:0;left:0;width:100%;background:#fff;display:flex;border-top:1px solid #e2e8f0;z-index:1000}
+.nav-btn{flex:1;text-align:center;padding:10px 2px;color:#64748b;cursor:pointer;font-size:10px}
+.nav-btn b{display:block;font-size:18px;font-weight:normal}
+.nav-btn.active{color:var(--primary);border-top:3px solid var(--primary)}
+input,select,textarea{width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit}
+.btn{background:var(--primary);color:#fff;border:none;padding:12px;border-radius:8px;width:100%;font-weight:bold;cursor:pointer;font-size:14px}
+.income{color:#000}.expense{color:#dc2626}.balance{color:#059669}
+.act{cursor:pointer;margin-left:10px;font-size:12px;font-weight:bold}
+.edit-i{color:#3b82f6}.del-i{color:#ef4444}
+table{width:100%;font-size:11px;border-collapse:collapse;margin-top:10px}
+th{text-align:left;border-bottom:2px solid #e2e8f0;padding:8px 4px}
+td{padding:8px 4px;border-bottom:1px solid #f1f5f9}
+.report-grid{display:flex;justify-content:space-between;margin-top:20px;padding:15px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+.report-meta{text-align:right;font-size:12px;color:#64748b}
+.dept-item{display:flex;justify-content:space-between;background:#f1f5f9;padding:8px;border-radius:6px;margin-bottom:5px;font-size:12px}
+.row2{display:flex;gap:10px}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:10px 16px;border-radius:5px;font-size:13px;z-index:3000;display:none}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:2000}
+#modal div{background:#fff;padding:20px;border-radius:12px;width:290px;text-align:center}
+#modal button{padding:9px 18px;border:none;border-radius:6px;margin:10px 4px 0;cursor:pointer;font-weight:bold}
+.page p{line-height:1.6;font-size:14px}
+a.wa{display:block;text-align:center;background:#25d366;color:#fff;text-decoration:none;padding:12px;border-radius:8px;font-weight:bold;margin-top:10px}
+@media(min-width:900px){
+ body{padding-bottom:0;margin-left:220px}
+ .nav{width:220px;height:100%;top:0;flex-direction:column;border-top:0;border-right:1px solid #e2e8f0;padding-top:70px}
+ .nav-btn{flex:none;text-align:left;padding:14px 20px;font-size:14px;border-top:0;border-left:3px solid transparent}
+ .nav-btn b{display:inline;margin-right:10px}
+ .nav-btn.active{border-top:0;border-left:3px solid var(--primary);background:#ecfdf5}
+ .header{margin-left:-220px;padding-left:235px;text-align:left}
+ .container{max-width:1000px}
+ #toast{bottom:30px}
+}
+@media(max-width:480px){.stat-row{grid-template-columns:1fr 1fr}}
+.m-only,#fab,#moreMenu{display:none}
+.sw{position:relative;display:inline-block;width:52px;height:30px}
+.sw input{opacity:0;width:0;height:0;margin:0}
+.sw span{position:absolute;inset:0;background:#cbd5e1;border-radius:30px;transition:.2s;cursor:pointer}
+.sw span:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.sw input:checked+span{background:var(--primary)}
+.sw input:checked+span:before{transform:translateX(22px)}
+.rp-h{font-size:13px;color:#334155;font-weight:bold;margin:12px 0 0}
+.rsel{display:flex;gap:6px;flex-wrap:wrap}
+.rsel select{flex:1;min-width:100px}
+@media(max-width:599px){
+ .d-only{display:none!important}
+ .m-only{display:block}
+ .container{padding:8px}
+ input,select,textarea{font-size:16px}
+ .report-grid{flex-direction:column;gap:10px}
+ .report-meta{text-align:left}
+ #fab{display:flex;position:fixed;left:16px;bottom:72px;width:54px;height:54px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:32px;line-height:1;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,.3);z-index:900;cursor:pointer;padding:0}
+ #moreMenu{display:block;position:fixed;right:10px;bottom:66px;background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:1500;overflow:hidden;opacity:0;visibility:hidden;transform:translateY(10px);transition:.2s}
+ #moreMenu.open{opacity:1;visibility:visible;transform:none}
+ #moreMenu div{padding:14px 32px;font-size:14px;border-bottom:1px solid #f1f5f9;cursor:pointer}
+ #moreMenu div:last-child{border-bottom:0}
+}
+</style>
+</head>
+<body>
+<div class="header">CHURCH FINANCE SYSTEM</div>
+<div class="container">
+
+<div id="homeTab" class="tab">
+  <div class="row2"><select id="dashMonth" onchange="loadDashboard()"></select><select id="dashYear" onchange="loadDashboard()"></select></div>
+  <div id="topStats" class="stat-row"></div>
+  <div class="card">
+    <input type="text" id="deptSearch" onkeyup="searchTable()" placeholder="Search departments...">
+    <div style="overflow-x:auto"><table><thead><tr><th>Dept</th><th id="bfTh">B/F</th><th>Inc</th><th>Exp</th><th>Bal</th></tr></thead><tbody id="deptTableBody"></tbody></table></div>
+  </div>
+  <div class="card"><h4>Recent Activity</h4><div id="recentList"></div></div>
+</div>
+
+<div id="reportTab" class="tab" style="display:none">
+  <div class="card">
+    <h3>Statement Report</h3>
+    <p class="rp-h">Start</p>
+    <div class="rsel"><select id="rsYear"></select><select id="rsDept"></select><select id="rsMonth"></select></div>
+    <p class="rp-h">End</p>
+    <div class="rsel"><select id="reYear"></select><select id="reDept"></select><select id="reMonth"></select></div>
+    <button class="btn" onclick="runReport()" style="background:#3b82f6">Filter Report</button>
+    <div id="dlBtns" class="row2" style="display:none;margin-top:5px">
+      <button class="btn" onclick="downloadPDF()" style="background:#111827">Print / Save PDF</button>
+      <button class="btn" onclick="downloadCSV()" style="background:#475569">Download CSV</button>
+    </div>
+    <div id="reportHeader" class="report-grid" style="display:none"><div id="reportSummary"></div><div id="reportMeta" class="report-meta"></div></div>
+    <div style="overflow-x:auto"><table id="reportDeptTable"></table></div>
+    <div style="overflow-x:auto"><table id="reportTable"></table></div>
+  </div>
+</div>
+
+<div id="addTab" class="tab" style="display:none">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="formTitle">New Entry</h3>
+      <button onclick="toggleDeptMgmt()" style="font-size:10px;border:none;background:#e2e8f0;border-radius:5px;padding:5px">Manage Depts</button>
+    </div>
+    <div id="deptMgmt" style="display:none;border:1px solid #ddd;padding:10px;margin-bottom:10px;border-radius:8px">
+      <div class="row2"><input type="text" id="newDeptName" placeholder="New Name"><button onclick="addNewDept()" style="width:60px;background:var(--primary);color:#fff;border:none;border-radius:5px">Add</button></div>
+      <div id="deptActionList" style="margin-top:10px"></div>
+    </div>
+    <input type="hidden" id="editId">
+    <label style="font-size:12px;color:#64748b">Transaction Date</label>
+    <input type="date" id="trxDate">
+    <select id="deptSelect"></select>
+    <input type="number" id="amtInput" placeholder="Amount (KSH)" min="0" step="any">
+    <select id="typeSelect"><option value="Income">Income (+)</option><option value="Expense">Expense (-)</option></select>
+    <textarea id="descInput" placeholder="Description"></textarea>
+    <button class="btn" id="saveBtn" onclick="saveTrx()">Save Record</button>
+    <button id="cancelEdit" class="btn" onclick="resetForm()" style="background:#64748b;margin-top:5px;display:none">Cancel Edit</button>
+  </div>
+</div>
+
+<div id="aboutTab" class="tab page" style="display:none"><div class="card">
+  <h3>About Us</h3>
+  <p>Church Finance System helps church treasurers record income and expenses by department, track balances month to month and year to year, and produce clear financial statements.</p>
+  <p>All records are stored on your own device and work without an internet connection.     Church Finance System power by EKAMBANI </p>
+</div></div>
+
+<div id="contactTab" class="tab page" style="display:none"><div class="card">
+  <h3>Contact Us</h3>
+  <p>Questions or support? Message us directly on WhatsApp.</p>
+  <a class="wa" id="waLink" href="https://wa.me/254748949444" target="_blank" rel="noopener">Chat on WhatsApp</a>
+</div></div>
+
+<div id="bfTab" class="tab page" style="display:none"><div class="card">
+  <h3>Balance Carry Forward</h3>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0">
+    <b id="bfState">B/F is ON</b>
+    <label class="sw"><input type="checkbox" id="bfToggle" onchange="toggleBF()"><span></span></label>
+  </div>
+  <p>When ON, the closing balance of earlier periods is carried forward into the selected period for each department, and shown on the Home page and in Reports.</p>
+  <p>When OFF, only the transactions inside the selected period are counted and no Balance Carry Forward is shown.</p>
+  <div id="fbBackup" style="margin-top:22px;border-top:1px solid #e2e8f0;padding-top:14px"></div>
+</div></div>
+
+</div>
+
+<div class="nav" id="nav">
+  <div class="nav-btn active" data-t="home"><b>&#8962;</b>HOME</div>
+  <div class="nav-btn" data-t="report"><b>&#9776;</b>REPORT</div>
+  <div class="nav-btn d-only" data-t="add"><b>&#10133;</b>ADD</div>
+  <div class="nav-btn d-only" data-t="about"><b>&#8505;</b>ABOUT</div>
+  <div class="nav-btn d-only" data-t="bf"><b>&#8644;</b>B/F</div>
+  <div class="nav-btn d-only" data-t="contact"><b>&#9742;</b>CONTACT</div>
+  <div class="nav-btn m-only" data-t="more"><b>&#9776;</b>MORE</div>
+</div>
+<div id="toast"></div>
+<button id="fab" onclick="switchTab('add')" aria-label="Add record">+</button>
+<div id="moreMenu">
+  <div onclick="switchTab('about')">About</div>
+  <div onclick="switchTab('contact')">Contact</div>
+  <div onclick="switchTab('bf')">B/F</div>
+</div>
+<div id="modal"><div><p id="mMsg"></p><button id="mNo">Cancel</button><button id="mYes" style="background:#000;color:#fff">OK</button></div></div>
+
+<script src="backup-kit.js"></script>
+<script>
+/* ---- CONFIG: WhatsApp number (country code, digits only) - same contact number as the Offering System ---- */
+const WHATSAPP_NUMBER = "254748949444";
+const WHATSAPP_TEXT = "Hello, I need help with the Church Finance System.";
+
+const monthsArr=["January","February","March","April","May","June","July","August","September","October","November","December"];
+let currentReportData=null, recentCache=[], saving=false, bfOn=true;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>Number(n||0).toLocaleString();
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
+
+/* ---- IndexedDB (database "ChurchFinanceKSH": used only by the Finance System) ---- */
+let _db=null;
+function db(){
+  if(_db) return Promise.resolve(_db);
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open("ChurchFinanceKSH",2);
+    r.onupgradeneeded=e=>{const d=e.target.result;
+      if(!d.objectStoreNames.contains("departments")) d.createObjectStore("departments",{keyPath:"id"});
+      if(!d.objectStoreNames.contains("transactions")) d.createObjectStore("transactions",{keyPath:"id"});
+      if(!d.objectStoreNames.contains("settings")) d.createObjectStore("settings",{keyPath:"id"});};
+    r.onsuccess=()=>{_db=r.result;res(_db)};
+    r.onerror=()=>rej(r.error);
+    r.onblocked=()=>toast("Close other tabs of this app, then reload");
+  });
+}
+async function idb(store,mode,fn){
+  const d=await db();
+  return new Promise((res,rej)=>{
+    const t=d.transaction(store,mode),s=t.objectStore(store),rq=fn(s);
+    t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error);
+  });
+}
+const getAll=s=>idb(s,"readonly",o=>o.getAll());
+const putRec=(s,v)=>idb(s,"readwrite",o=>o.put(v)).then(r=>{if(window.__bk)window.__bk.notifyChange();return r});
+const delRec=(s,k)=>idb(s,"readwrite",o=>o.delete(k)).then(r=>{if(window.__bk)window.__bk.notifyChange();return r});
+
+/* ---- UI helpers ---- */
+function toast(m){const t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",2200)}
+function ask(msg){return new Promise(r=>{$("mMsg").textContent=msg;$("modal").style.display="flex";
+  $("mYes").onclick=()=>{$("modal").style.display="none";r(true)};$("mNo").onclick=()=>{$("modal").style.display="none";r(false)}})}
+function switchTab(t){
+  toggleMore(false);$("fab").style.visibility=t==="add"?"hidden":"visible";
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.t===t||(b.dataset.t==="more"&&["about","contact","bf"].includes(t))));
+  document.querySelectorAll(".tab").forEach(e=>e.style.display="none");
+  $(t+"Tab").style.display="block";window.scrollTo(0,0);
+}
+function toggleMore(f){const m=$("moreMenu");m.classList.toggle("open",f===undefined?!m.classList.contains("open"):f)}
+document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest('[data-t="more"]'))toggleMore(false)});
+async function toggleBF(){
+  bfOn=$("bfToggle").checked;
+  try{await putRec("settings",{id:"bf",value:bfOn})}catch(e){toast("Could not save setting")}
+  $("bfState").textContent="B/F is "+(bfOn?"ON":"OFF");
+  await loadDashboard();if(currentReportData)await runReport();
+  toast(bfOn?"Balance Carry Forward ON":"Balance Carry Forward OFF");
+}
+function waUrl(){return "https://wa.me/"+WHATSAPP_NUMBER+"?text="+encodeURIComponent(WHATSAPP_TEXT)}
+
+window.onload=async()=>{
+  document.querySelectorAll(".nav-btn").forEach(b=>b.onclick=()=>b.dataset.t==="more"?toggleMore():switchTab(b.dataset.t));
+  try{const st=await idb("settings","readonly",o=>o.get("bf"));bfOn=!st||st.value!==false}catch(e){}
+  $("waLink").href=waUrl();
+  $("bfToggle").checked=bfOn;$("bfState").textContent="B/F is "+(bfOn?"ON":"OFF");
+  setupUI();loadDashboard();$("trxDate").valueAsDate=new Date();
+  mountBackup();
+};
+function setupUI(){
+  const now=new Date();
+  [$("dashMonth"),$("rsMonth"),$("reMonth")].forEach(sel=>{
+    sel.add(new Option("All Months","ALL"));monthsArr.forEach((m,i)=>sel.add(new Option(m,i)));
+    sel.value=(sel.id==="dashMonth")?now.getMonth():"ALL";});
+  [$("dashYear"),$("rsYear"),$("reYear")].forEach(sel=>{
+    sel.add(new Option("All Years","ALL"));for(let i=2024;i<=2040;i++) sel.add(new Option(i,i));
+    sel.value=(sel.id==="dashYear")?now.getFullYear():"ALL";});
+}
+
+/* ---- Period + carry-forward logic ----
+   Opening balance (B/F) is always CALCULATED from all earlier records of the
+   department (never stored), so it carries correctly month-to-month and
+   year-to-year and can never be counted twice. */
+function period(y,m){
+  if(y==="ALL") return {start:null,prefix:null,month:m==="ALL"?null:+m};
+  const yy=String(y);
+  if(m==="ALL") return {start:yy+"-01-01",prefix:yy,month:null};
+  const mm=String(+m+1).padStart(2,"0");
+  return {start:yy+"-"+mm+"-01",prefix:yy+"-"+mm,month:null};
+}
+function inPeriod(date,p,m){
+  if(p.prefix) return date.startsWith(p.prefix);
+  if(p.month!==null) return +date.slice(5,7)-1===p.month;
+  return true;
+}
+function summarize(trans,deptId,y,m){
+  const p=period(y,m);let open=0,inc=0,exp=0;
+  trans.forEach(t=>{
+    if(deptId!=="ALL"&&t.dept!==deptId) return;
+    const net=(t.type==="Income"?1:-1)*Number(t.amount||0);
+    if(p.start&&t.date<p.start){if(bfOn) open+=net}
+    else if(inPeriod(t.date,p,m)){if(t.type==="Income")inc+=Number(t.amount||0);else exp+=Number(t.amount||0)}
+  });
+  return {open,inc,exp,bal:open+inc-exp};
+}
+
+/* ---- Dashboard ---- */
+async function loadDashboard(){
+  const m=$("dashMonth").value,y=$("dashYear").value;
+  const [depts,trans]=await Promise.all([getAll("departments"),getAll("transactions")]);
+  const active=depts.filter(d=>d.active!==false).sort((a,b)=>a.name.localeCompare(b.name));
+  const map={};depts.forEach(d=>map[d.id]=d.name);
+  const activeIds=new Set(active.map(d=>d.id));
+  let O=0,I=0,E=0,tH="";
+  active.forEach(d=>{const s=summarize(trans,d.id,y,m);O+=s.open;I+=s.inc;E+=s.exp;
+    tH+=`<tr><td>${esc(d.name)}</td>${bfOn?`<td>${fmt(s.open)}</td>`:""}<td class="income">${fmt(s.inc)}</td><td class="expense">${fmt(s.exp)}</td><td class="balance"><b>${fmt(s.bal)}</b></td></tr>`});
+  $("topStats").innerHTML=`
+    <div class="stat-box"><h5>Balance</h5><p class="balance">KSH ${fmt(O+I-E)}</p></div>
+    ${bfOn?`<div class="stat-box"><h5>B/F</h5><p>KSH ${fmt(O)}</p></div>`:""}
+    <div class="stat-box"><h5>Income</h5><p class="income">KSH ${fmt(I)}</p></div>
+    <div class="stat-box"><h5>Expense</h5><p class="expense">KSH ${fmt(E)}</p></div>`;
+  $("bfTh").style.display=bfOn?"":"none";
+  $("deptTableBody").innerHTML=tH||'<tr><td colspan="5">No departments yet. Add one under ADD &gt; Manage Depts.</td></tr>';
+  recentCache=trans.slice().sort((a,b)=>(b.created||0)-(a.created||0)).slice(0,30);
+  $("recentList").innerHTML=recentCache.map(t=>{
+    const dn=map[t.dept]||"Unknown";
+    return `<div style="padding:10px;border-bottom:1px dotted #ccc;display:flex;justify-content:space-between;align-items:center;font-size:12px">
+      <div><b>${esc(dn)}</b><br><small>${t.date.split("-").reverse().join("/")} - ${esc(t.desc)}</small></div>
+      <div style="text-align:right"><b class="${t.type.toLowerCase()}">${fmt(t.amount)}</b><br>
+      <span class="act edit-i" onclick="startEdit('${t.id}')">Edit</span><span class="act del-i" onclick="confirmDelete('${t.id}')">Delete</span></div></div>`}).join("")||"<small>No records yet.</small>";
+  const dOpt=active.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");
+  const cur=$("deptSelect").value;$("deptSelect").innerHTML=dOpt;if(cur&&activeIds.has(cur))$("deptSelect").value=cur;
+  ["rsDept","reDept"].forEach(id=>{const rc=$(id).value;$(id).innerHTML='<option value="ALL">All Departments</option>'+dOpt;if(rc)$(id).value=rc});
+  $("deptActionList").innerHTML=active.map(d=>`<div class="dept-item">${esc(d.name)} <span style="color:red;cursor:pointer" onclick="removeDept('${d.id}')">X</span></div>`).join("");
+  searchTable();
+}
+
+/* ---- Transactions ---- */
+function startEdit(id){
+  const t=recentCache.find(x=>x.id===id);if(!t)return;
+  switchTab("add");
+  $("editId").value=t.id;$("trxDate").value=t.date;$("deptSelect").value=t.dept;
+  $("amtInput").value=t.amount;$("typeSelect").value=t.type;$("descInput").value=t.desc;
+  $("formTitle").innerText="Edit Entry";$("cancelEdit").style.display="block";
+}
+async function confirmDelete(id){
+  if(await ask("Delete this record?")){await delRec("transactions",id);toast("Deleted Successfully");loadDashboard()}
+}
+async function saveTrx(){
+  if(saving) return;
+  const editId=$("editId").value;
+  const o={id:editId||uid(),date:$("trxDate").value||new Date().toISOString().slice(0,10),
+    dept:$("deptSelect").value,amount:parseFloat($("amtInput").value),type:$("typeSelect").value,
+    desc:$("descInput").value.trim()};
+  if(!o.dept){toast("Add a department first");return}
+  if(!o.amount||o.amount<=0){toast("Enter a valid amount");return}
+  saving=true;$("saveBtn").disabled=true;
+  try{
+    const all=await getAll("transactions");
+    const dup=all.find(t=>t.id!==o.id&&t.date===o.date&&t.dept===o.dept&&t.type===o.type&&Number(t.amount)===o.amount&&(t.desc||"")===o.desc);
+    if(dup){toast("Duplicate record blocked");return}
+    if(editId){const old=all.find(t=>t.id===editId);o.created=old?old.created:Date.now();o.ref=old?old.ref:"TRX-"+Date.now()}
+    else{o.created=Date.now();o.ref="TRX-"+o.created}
+    await putRec("transactions",o);
+    toast(editId?"Updated Successfully":"Saved Successfully");
+    resetForm();await loadDashboard();switchTab("home");
+  }catch(e){toast("Save failed: "+e)}
+  finally{saving=false;$("saveBtn").disabled=false}
+}
+function resetForm(){
+  $("editId").value="";$("amtInput").value="";$("descInput").value="";$("trxDate").valueAsDate=new Date();
+  $("formTitle").innerText="New Entry";$("cancelEdit").style.display="none";
+}
+
+/* ---- Departments ---- */
+function toggleDeptMgmt(){const e=$("deptMgmt");e.style.display=e.style.display==="none"?"block":"none"}
+async function addNewDept(){
+  const name=$("newDeptName").value.trim();if(!name)return;
+  const depts=await getAll("departments");
+  if(depts.some(d=>d.active!==false&&d.name.toLowerCase()===name.toLowerCase())){toast("Department already exists");return}
+  const old=depts.find(d=>d.active===false&&d.name.toLowerCase()===name.toLowerCase());
+  await putRec("departments",old?{...old,active:true}:{id:"D-"+uid(),name,active:true});
+  toast("Added");$("newDeptName").value="";loadDashboard();
+}
+async function removeDept(id){
+  if(!await ask("Remove this department?"))return;
+  const depts=await getAll("departments");const d=depts.find(x=>x.id===id);
+  if(d){d.active=false;await putRec("departments",d)}
+  toast("Dept Removed");loadDashboard();
+}
+
+/* ---- Reports (Start -> End, per-department Balance Carry Forward) ----
+   B/F per department = net of that department's records dated before the Start date.
+   It is recalculated from stored records every time, so it can never be duplicated. */
+function plabel(y,m){return (m==="ALL"?"":monthsArr[m]+" ")+(y==="ALL"?"(all years)":y)}
+function bound(y,m,end){
+  if(y==="ALL") return null;
+  if(m==="ALL") return y+(end?"-12-31":"-01-01");
+  return y+"-"+String(+m+1).padStart(2,"0")+(end?"-31":"-01");
+}
+async function runReport(){
+  const sy=$("rsYear").value,sm=$("rsMonth").value,ey=$("reYear").value,em=$("reMonth").value;
+  const sd=$("rsDept"),ed=$("reDept");
+  const from=bound(sy,sm,false),to=bound(ey,em,true);
+  if(from&&to&&from>to){toast("Start must not be after End");return}
+  const [trans,depts]=await Promise.all([getAll("transactions"),getAll("departments")]);
+  const used=new Set(trans.map(t=>t.dept));
+  const pool=depts.filter(d=>d.active!==false||used.has(d.id)).sort((a,b)=>a.name.localeCompare(b.name));
+  const all=sd.value==="ALL"||ed.value==="ALL";
+  const pick=all?pool:pool.filter(d=>d.id===sd.value||d.id===ed.value);
+  const per=pick.map(d=>({id:d.id,name:d.name,open:0,inc:0,exp:0,bal:0,txs:[],months:[]}));
+  const pm={};per.forEach(x=>pm[x.id]=x);
+  /* Pass 1: each department only sees its own records. Records before Start form that
+     department's Balance Carry Forward; records inside Start..End form the period. */
+  trans.forEach(t=>{
+    const x=pm[t.dept];if(!x)return;
+    const a=Number(t.amount||0),net=t.type==="Income"?a:-a;
+    if(from&&t.date<from){if(bfOn)x.open+=net;return}
+    if(to&&t.date>to)return;
+    if(t.type==="Income")x.inc+=a;else x.exp+=a;
+    x.txs.push({raw:t.date,created:t.created||0,desc:t.desc||"-",income:t.type==="Income"?a:0,expense:t.type==="Expense"?a:0});
+  });
+  /* Pass 2: walk month by month; each month's B/F is the previous month's closing balance. */
+  per.forEach(x=>{
+    x.txs.sort((a,b)=>a.raw.localeCompare(b.raw)||a.created-b.created);
+    let run=x.open,cur=null;
+    x.txs.forEach(t=>{
+      const ym=t.raw.slice(0,7);
+      if(!cur||cur.ym!==ym){cur={ym,label:monthsArr[+ym.slice(5,7)-1]+" "+ym.slice(0,4),open:run,inc:0,exp:0,close:run,rows:[]};x.months.push(cur)}
+      run+=t.income-t.expense;cur.inc+=t.income;cur.exp+=t.expense;cur.close=run;
+      cur.rows.push({date:t.raw.split("-").reverse().join("/"),desc:t.desc,income:t.income,expense:t.expense,bal:run});
+    });
+    x.bal=x.open+x.inc-x.exp;
+  });
+  const sum=k=>per.reduce((t,x)=>t+x[k],0);
+  const dn=all?"All Departments":(sd.value===ed.value?per.map(x=>x.name).join(""):per.map(x=>x.name).join(" & "));
+  currentReportData={per,open:sum("open"),totalInc:sum("inc"),totalExp:sum("exp"),balance:sum("bal"),
+    meta:{start:plabel(sy,sm),end:plabel(ey,em),deptName:dn||"No department",year:(sy===ey?sy:sy+"-"+ey).replace(/ALL/g,"All"),bf:bfOn}};
+  renderReport();toast("Filtered");
+}
+function summaryTable(r){
+  const bf=r.meta.bf;
+  let h='<caption style="text-align:left;font-weight:bold;padding:6px 0">'+(bf?"Balance Carry Forward and Department Summary":"Department Summary")+'</caption><thead><tr><th>Department</th>'+(bf?'<th>Balance Carry Forward</th>':'')+'<th>Income</th><th>Expenses</th><th>Closing Balance</th></tr></thead><tbody>';
+  const row=(n,o,i,e,b,bold)=>`<tr${bold?' style="font-weight:bold;background:#f1f5f9"':''}><td>${esc(n)}</td>${bf?`<td>${fmt(o)}</td>`:''}<td>${fmt(i)}</td><td style="color:#dc2626">${fmt(e)}</td><td style="color:#059669">${fmt(b)}</td></tr>`;
+  r.per.forEach(x=>h+=row(x.name,x.open,x.inc,x.exp,x.bal));
+  if(r.per.length>1) h+=row("OVERALL",r.open,r.totalInc,r.totalExp,r.balance,true);
+  return h+'</tbody>';
+}
+function txTable(r){
+  const bf=r.meta.bf,cs=bf?6:5,red='style="color:#dc2626"';
+  let h='<caption style="text-align:left;font-weight:bold;padding:6px 0">Transactions by Department</caption><thead><tr><th>Date</th><th>Dept</th><th>Desc</th><th>Inc</th><th>Exp</th>'+(bf?'<th>Balance</th>':'')+'</tr></thead><tbody>';
+  const bfRow=(lbl,o)=>`<tr><td colspan="3"><i>${lbl}</i></td><td></td><td></td><td><b>${fmt(o)}</b></td></tr>`;
+  r.per.forEach(x=>{
+    h+=`<tr style="background:#e2e8f0;font-weight:bold"><td colspan="${cs}">${esc(x.name)}</td></tr>`;
+    if(bf&&!x.months.length) h+=bfRow("Balance Carry Forward",x.open);
+    x.months.forEach(mo=>{
+      h+=`<tr style="background:#f1f5f9"><td colspan="${cs}"><b>${mo.label}</b></td></tr>`;
+      if(bf) h+=bfRow("Balance Carry Forward",mo.open);
+      mo.rows.forEach(t=>h+=`<tr><td>${t.date}</td><td>${esc(x.name)}</td><td style="font-size:10px">${esc(t.desc)}</td><td>${fmt(t.income)}</td><td ${red}>${fmt(t.expense)}</td>${bf?`<td>${fmt(t.bal)}</td>`:""}</tr>`);
+      h+=`<tr style="font-weight:bold"><td colspan="3">${bf?"Closing Balance":"Month Total"}</td><td>${fmt(mo.inc)}</td><td ${red}>${fmt(mo.exp)}</td>${bf?`<td>${fmt(mo.close)}</td>`:""}</tr>`;
+    });
+    h+=`<tr style="font-weight:bold;background:#ecfdf5"><td colspan="3">${esc(x.name)} total</td><td>${fmt(x.inc)}</td><td ${red}>${fmt(x.exp)}</td>${bf?`<td>${fmt(x.bal)}</td>`:""}</tr>`;
+  });
+  if(r.per.length>1) h+=`<tr style="font-weight:bold;background:#d1fae5"><td colspan="3">OVERALL (all departments)</td><td>${fmt(r.totalInc)}</td><td ${red}>${fmt(r.totalExp)}</td>${bf?`<td>${fmt(r.balance)}</td>`:""}</tr>`;
+  return h+'</tbody>';
+}
+function renderReport(){
+  const r=currentReportData,m=r.meta;
+  $("dlBtns").style.display="flex";$("reportHeader").style.display="flex";
+  $("reportSummary").innerHTML=`<p style="margin:2px 0"><b>Overall Summary</b></p>`+
+    (m.bf?`<p style="margin:2px 0"><b>Balance Carry Forward:</b> KSH ${fmt(r.open)}</p>`:"")+`
+    <p style="margin:2px 0"><b>Total Income:</b> KSH ${fmt(r.totalInc)}</p>
+    <p style="margin:2px 0;color:#dc2626"><b>Total Expenses:</b> KSH ${fmt(r.totalExp)}</p>
+    <p style="margin:5px 0;font-size:1.1rem;color:#059669"><b>Closing Balance: KSH ${fmt(r.balance)}</b></p>`;
+  $("reportMeta").innerHTML=`<p style="margin:2px 0"><b>Start:</b> ${esc(m.start)}</p>
+    <p style="margin:2px 0"><b>End:</b> ${esc(m.end)}</p>
+    <p style="margin:2px 0"><b>Dept:</b> ${esc(m.deptName)}</p>`;
+  $("reportDeptTable").innerHTML=summaryTable(r);
+  $("reportTable").innerHTML=txTable(r);
+}
+function reportHTML(){
+  const r=currentReportData,m=r.meta;
+  const ts='style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:20px"';
+  return `<html><head><title>Church_Report_${esc(m.year)}</title><style>th,td{padding:5px;text-align:left}</style></head><body style="font-family:sans-serif;padding:20px">
+  <h2 style="text-align:center;color:#0f172a">Church Financial Statement</h2>
+  <table style="width:100%;margin-bottom:20px"><tr><td style="width:50%;vertical-align:top">
+  <p><b>Overall Summary</b></p>${m.bf?`<p><b>Balance Carry Forward:</b> KSH ${fmt(r.open)}</p>`:""}
+  <p><b>Total Income:</b> KSH ${fmt(r.totalInc)}</p>
+  <p style="color:#dc2626"><b>Total Expenses:</b> KSH ${fmt(r.totalExp)}</p>
+  <h3 style="color:#059669">Closing Balance: KSH ${fmt(r.balance)}</h3></td>
+  <td style="text-align:right;vertical-align:top;font-size:12px;color:#475569">
+  <p><b>Start:</b> ${esc(m.start)}</p><p><b>End:</b> ${esc(m.end)}</p><p><b>Dept:</b> ${esc(m.deptName)}</p></td></tr></table>
+  <table border="1" ${ts}>${summaryTable(r)}</table>
+  <table border="1" ${ts}>${txTable(r)}</table></body></html>`;
+}
+function downloadPDF(){
+  if(!currentReportData)return;
+  const fr=document.createElement("iframe");fr.style.cssText="position:fixed;width:0;height:0;border:0";
+  document.body.appendChild(fr);fr.srcdoc=reportHTML();
+  fr.onload=()=>{fr.contentWindow.focus();fr.contentWindow.print();setTimeout(()=>fr.remove(),60000)};
+  toast("Choose 'Save as PDF' in the print window");
+}
+function downloadCSV(){
+  if(!currentReportData)return;
+  const r=currentReportData,m=r.meta,bf=m.bf,q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  let c=`Start,${q(m.start)}\nEnd,${q(m.end)}\nDepartment,${q(m.deptName)}\n\n`;
+  c+="Department,"+(bf?"Balance Carry Forward,":"")+"Income,Expenses,Closing Balance\n";
+  r.per.forEach(x=>c+=[q(x.name)].concat(bf?[x.open]:[],[x.inc,x.exp,x.bal]).join(",")+"\n");
+  if(r.per.length>1) c+=["OVERALL"].concat(bf?[r.open]:[],[r.totalInc,r.totalExp,r.balance]).join(",")+"\n";
+  c+="\nDepartment,Month,Date,Description,Income,Expense,Balance\n";
+  r.per.forEach(x=>{
+    if(bf&&!x.months.length) c+=[q(x.name),"","","Balance Carry Forward","","",x.open].join(",")+"\n";
+    x.months.forEach(mo=>{
+      if(bf) c+=[q(x.name),q(mo.label),"","Balance Carry Forward","","",mo.open].join(",")+"\n";
+      mo.rows.forEach(t=>c+=[q(x.name),q(mo.label),t.date,q(t.desc),t.income,t.expense,bf?t.bal:""].join(",")+"\n");
+      c+=[q(x.name),q(mo.label),"",bf?"Closing Balance":"Month Total",mo.inc,mo.exp,bf?mo.close:""].join(",")+"\n";
+    });
+    c+=[q(x.name),"","",q(x.name+" total"),x.inc,x.exp,bf?x.bal:""].join(",")+"\n";
+  });
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob(["\ufeff"+c],{type:"text/csv"}));
+  a.download="Church_Report_"+m.year+".csv";document.body.appendChild(a);a.click();a.remove();
+  toast("Done");
+}
+function searchTable(){
+  const q=$("deptSearch").value.toUpperCase();
+  for(const r of $("deptTableBody").rows) r.style.display=r.cells[0].innerText.toUpperCase().includes(q)?"":"none";
+}
+
+/* =====================================================================
+   BACKUP PAGE (Google Drive) - own folder, own file, own Auto Backup switch.
+   Records are read and restored only in this system's database "ChurchFinanceKSH".
+   ===================================================================== */
+async function finSnapshot(){
+  const [d,t,s]=await Promise.all([getAll("departments"),getAll("transactions"),getAll("settings")]);
+  return {data:{departments:d,transactions:t,settings:s},counts:{departments:d.length,transactions:t.length,settings:s.length}};
+}
+function finValidate(d){
+  if(!d||!Array.isArray(d.departments)||!Array.isArray(d.transactions)||!Array.isArray(d.settings)) throw new Error("The backup does not contain Finance System data.");
+  const dids=new Set();
+  d.departments.forEach(x=>{if(!x||typeof x.id!=="string"||!x.id||typeof x.name!=="string") throw new Error("A department in the backup is invalid.");if(dids.has(x.id)) throw new Error("The backup lists the same department twice.");dids.add(x.id)});
+  const tids=new Set();
+  d.transactions.forEach(t=>{
+    if(!t||typeof t.id!=="string"||!t.id||!/^\d{4}-\d{2}-\d{2}$/.test(String(t.date))||typeof t.dept!=="string"||!(t.type==="Income"||t.type==="Expense")||!isFinite(Number(t.amount))||Number(t.amount)<0) throw new Error("A transaction in the backup is invalid.");
+    if(tids.has(t.id)) throw new Error("The backup lists the same transaction twice.");tids.add(t.id)});
+  d.settings.forEach(s=>{if(!s||typeof s.id!=="string") throw new Error("A setting in the backup is invalid.")});
+}
+async function finApply(d){
+  const h=await db(), names=["departments","transactions","settings"];
+  await new Promise((res,rej)=>{
+    const tx=h.transaction(names,"readwrite");
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new Error("The restore was cancelled by the database."));
+    try{names.forEach(n=>{const s=tx.objectStore(n);s.clear();d[n].forEach(v=>s.put(v))})}catch(e){try{tx.abort()}catch(_){}rej(e)}
+  });
+}
+async function finAfterRestore(){
+  try{const st=await idb("settings","readonly",o=>o.get("bf"));bfOn=!st||st.value!==false}catch(e){}
+  $("bfToggle").checked=bfOn;$("bfState").textContent="B/F is "+(bfOn?"ON":"OFF");
+  await loadDashboard();if(currentReportData)await runReport();
+}
+function mountBackup(){
+  if(!window.ChurchBackupKit){$("fbBackup").textContent="Backup is not available (backup-kit.js missing).";return}
+  window.__bk=ChurchBackupKit.mount({system:"finance",label:"Church Finance System",container:$("fbBackup"),
+    defaultFolderName:"Church Finance Backup",backupFileName:"church-finance-backup.json",formatName:"church-finance-backup",regKey:"churchFinanceBackupFolder",
+    ask:m=>ask(m),toast:(m)=>toast(m),readSnapshot:finSnapshot,validate:finValidate,applyRestore:finApply,afterRestore:finAfterRestore});
+}
+</script>
+</body>
+</html>
